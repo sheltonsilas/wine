@@ -193,7 +193,12 @@ static DWORD set_reg_value_dword( HKEY hkey, const WCHAR *name, DWORD value )
     return RegSetValueExW( hkey, name, 0, REG_DWORD, (const BYTE *)&value, sizeof(value) );
 }
 
-#if defined(__i386__) || defined(__x86_64__)
+/* ARM64EC defines __x86_64__ on purpose: that is how it stays source-compatible with
+ * x86-64 Windows code. The toolchain is not an x86 one, though. llvm-mingw's intrin.h
+ * declares no __cpuid, __rdtsc or __rdtscp for arm64ec, so this branch fails to compile
+ * with three "call to undeclared function" errors. The build is an ARM64 PE either way
+ * and the counter frequency is right there in CNTFRQ_EL0, so take the ARM64 branch. */
+#if (defined(__i386__) || defined(__x86_64__)) && !defined(__arm64ec__)
 
 static BOOL is_tsc_trusted_by_the_kernel(void)
 {
@@ -297,7 +302,7 @@ static UINT64 read_tsc_frequency(void)
     return freq;
 }
 
-#elif defined(__aarch64__)
+#elif defined(__aarch64__) || defined(__arm64ec__)
 
 static UINT64 read_tsc_frequency(void)
 {
